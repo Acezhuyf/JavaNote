@@ -685,3 +685,73 @@ Synchronized和ReentrantLock他们的开销差距是在释放锁时唤醒线程�
 ## Java线程并发中常见的锁--自旋锁 偏向锁
 
 https://www.cnblogs.com/softidea/p/5530761.html
+
+## 自定义异常配合枚举
+
+在系统开发过程中，总少不免要自己处理一些异常信息，然后将异常信息变成友好的提示返回到客户端的这样一个过程，之前都是new一个自定义的异常，当然这个所谓的自定义异常也是继承RuntimeException的，但这样往往会造成异常信息说明不一致的情况，所以就想到了用枚举来解决的办法。
+
+```java
+public interface IErrorCode {
+     
+    public String getErrorCode();
+     
+    public String getErrorMessage();
+     
+}
+
+public enum SysErrorEnums implements IErrorCode {
+
+    /**参数为空*/
+    EMPTY_PARAME("A11002","参数为空"),
+    /**参数错误*/
+    ERROR_PARAME("A11002","参数错误");
+    
+    private String errorCode;
+    private String errorMessage;
+    
+    private SysErrorEnums(String errorCode, String errorMessage) {
+        this.errorCode = errorCode;
+        this.errorMessage = errorMessage;
+    }
+
+    public String getErrorCode() {
+        return errorCode;
+    }
+
+    public void setErrorCode(String errorCode) {
+        this.errorCode = errorCode;
+    }
+
+    public String getErrorMessage() {
+        return errorMessage;
+    }
+
+    public void setErrorMessage(String errorMessage) {
+        this.errorMessage = errorMessage;
+    }
+}
+
+public class BusinessException extends RuntimeException {
+    
+    private static final long serialVersionUID = 1L;
+    
+    private IErrorCode iErrorCode;
+    
+    private String errorCode;
+    private String errorMessage;
+    private Map<String, Object> errorData;
+        
+        public BusinessException(IErrorCode iErrorCode) {
+        super();
+        this.iErrorCode = iErrorCode;
+        this.errorCode = iErrorCode.getErrorCode();
+        this.errorMessage = iErrorCode.getErrorMessage();
+    }
+        
+        //其他get、set、构造方法
+}
+
+if(true){
+   throw new BusinessException(SysErrorEnums.EMPTY_OBJ);
+}
+```
