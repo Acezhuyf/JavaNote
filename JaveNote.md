@@ -302,14 +302,6 @@ public interface Runnable {
 
 + Callable接口支持返回执行结果，此时需要调用FutureTask.get()方法实现，此方法会阻塞主线程直到获取‘将来’结果；当不调用此方法时，主线程不会阻塞！
 
-## Synchronized
-
-互斥锁，可用于代码块，方法体（实例方法和类方法）
-造成线程安全问题的主要诱因有两点:
-
-+ 存在共享数据(也称临界资源)
-+ 存在多条个线程共同操作共享数据
-
 ## 深入了解AtomicInteger
 
 [深入了解AtomicInteger](https://www.cnblogs.com/rever/p/8215743.html "")
@@ -638,7 +630,7 @@ hashmap通过key的hash值来决定存储位置，在get()时，先通过key的h
 但是反射相比于直接调用，要花更多的时间来查找方法等，所以效率较低。常用的优化方式有：
 
 1. 使用HashMap缓存方法，https://www.cnblogs.com/RUN-TIME/p/5780447.html
-2. 使用ReflectASM搞性能反射包 https://www.cnblogs.com/juetoushan/p/7724793.html （使用索引反射会好些）在调用方法之前使用了反射、又生成了字节码还进行了新类的加载 这三部一样是很耗时的。如果将从开始到结束的所有时间算进去 其实它相比其他反射并不怎么占优，但如果只生成一次代理类的话其性能就很高了。所以使用这个jar包要注意缓存生成的class对象。尽量少重复生成。
+2. 使用ReflectASM高性能反射包 https://www.cnblogs.com/juetoushan/p/7724793.html （使用索引反射会好些）在调用方法之前使用了反射、又生成了字节码还进行了新类的加载 这三部一样是很耗时的。如果将从开始到结束的所有时间算进去 其实它相比其他反射并不怎么占优，但如果只生成一次代理类的话其性能就很高了。所以使用这个jar包要注意缓存生成的class对象。尽量少重复生成。
 
 ## 线程池种类和使用场景
 https://www.cnblogs.com/sachen/p/7401959.html
@@ -683,6 +675,10 @@ Synchronized和ReentrantLock他们的开销差距是在释放锁时唤醒线程�
 如果是线程并发量不大的情况下,那么Synchronized因为自旋锁,偏向锁,轻量级锁的原因,不用将等待线程挂起,偏向锁甚至不用自旋,所以在这种情况下要比ReentrantLock高效。
 
 ## Java线程并发中常见的锁--自旋锁 偏向锁
+
+ 如果偏向锁失败，Java虚拟机会让线程申请轻量级锁。轻量级锁在虚拟机内部，使用一个称为BasicObjecLock的对象实现，这个对象内部由一个BasicLock对象和一个持有该锁的Java对象指针组成。BasicobjectLock对象放置在Java栈的栈帧中。
+
+首先，BasicLock通过set_displaced_header()方法备份了原对象的Mark Word。接着，使用CAS操作，尝试将BasicLock的地址复制到对象头的Mark Word。如果复制 成功，那么加锁成功。如果加锁失败，那么轻量级锁就有可能被膨胀为重量级锁。由于BasicObjectLock对象在线程栈中，因此该指针必然指向持有该锁的线程栈空间。当需要判断一个线程是否持有该对象时，只需要简单地判断对象头的指针是否在当前线程的栈地址范围即可。
 
 https://www.cnblogs.com/softidea/p/5530761.html
 
@@ -755,3 +751,307 @@ if(true){
    throw new BusinessException(SysErrorEnums.EMPTY_OBJ);
 }
 ```
+
+## Mysql索引失效
+
+https://www.cnblogs.com/shynshyn/p/7887742.html
+https://blog.csdn.net/wdjxxl/article/details/79790421
+
++ 查询条件中有or
++ like的模糊查询以%开头，索引失效
++ 如果列类型是字符串，那一定要在条件中将数据使用引号引用起来，否则不会使用索引
++ 如果MySQL预计使用全表扫描要比使用索引快，则不使用索引
++ 联合索引的最左原则，如（c1,c2,c3）的联合索引，where 条件按照索引建立的字段顺序来使用（不代表and条件必须按照顺序来写），如果中间某列没有条件，则不使用索引。（只能使用c1  c1,c2 c1,c2,c3这三种组合来查询，如果条件where c1 = 1 and c3 = 2则只使用c1的索引  PS：一个索引长度为3byte）
+
+## jvm 内存模型
+
++ 栈（stack 虚拟机栈 本地方法栈 程序计数器）
++ 堆（heap）
++ 方法区
+
+(Code Segment-代码段 Data Segment-数据段都是属于方法区)比如最通用的tomcat启动一个war包服务，tomcat的类加载器将war中的class字节码加载到jvm的方法区（习惯称之为永久代），存储字节码的的位置被称为Code Segment ，存储静态常量和字符串常量的位置被称为Data Segment。 
+
+## java 1.5 逆变与协变
+
+如果A、B表示类型，f(⋅)表示类型转换，≤表示继承关系（比如，A ≤ B表示A是由B派生出来的子类）；
+
++ f(⋅)是逆变（contravariant）的，当A ≤ B时有f(B)≤f(A)成立；
++ f(⋅)是协变（covariant）的，当A ≤ B时有f(A)≤f(B)成立；
++ f(⋅)是不变（invariant）的，当A ≤ B时上述两个式子均不成立，即f(A)与f(B)相互之间没有继承关系。
+
+List<? extends Number> list = new ArrayList<Integer>();
+ArrayList<Integer>是List<? extends Number>派生出来的子类，而Integer也是Number派生出来的子类，所以时协变，以此类推，List<? super Number> list = new ArrayList<Object>();ArrayList<Object>是List<? extends Number>派生出来的子类，而Number是Object派生出来的子类，所以是逆变
+
+PECS总结：
+要从泛型类取数据时，用extends；  协变
+要往泛型类写数据时，用super；    逆变
+既要取又要写，就不用通配符（即extends与super都不用） 不变
+
+从Java 1.5开始，子类覆盖父类方法时允许协变返回更为具体的类型：
+
+```java
+class Super {
+    Number method(Number n) { ... }
+}
+
+class Sub extends Super {
+    @Override 
+    Integer method(Number n) { ... }
+}
+```
+
+
+
+https://www.cnblogs.com/softidea/p/5122304.html
+https://www.jianshu.com/p/2bf15c5265c5
+
+
+## Mysql事务隔离级别
+
+在Mysql InnoDB 中，事务主要有四种隔离级别
+
++ Read uncommitted (未提交读)
++ Read committed (已提交读)
++ Repeatable read (可重复读) mysql默认
++ Serializable (可串行化)
+
+在理解四种隔离级别之前，我们需要先了解另外三个名词：
+
++ 脏读
+
+    另一个事务修改了数据，但尚未提交，而本事务中的SELECT会读到这些未被提交的数据。
++ 不可重复读
+
+    解决了脏读后，会遇到，同一个事务执行过程中，另外一个事务提交了新数据，因此本事务先后两次读到的数据结果会不一致。（主要出现在delete和update中）
++ 幻读
+
+    解决了不重复读，保证了同一个事务里，查询的结果都是事务开始时的状态（一致性）。但是，如果另一个事务同时提交了新数据，本事务再更新时，就会“惊奇的”发现了这些新数据，貌似之前读到的数据是“鬼影”一样的幻觉。(insert)
+
+    已提交读解决脏读，可重复读解决不可重复读和幻读问题
+
+    https://blog.csdn.net/u014377963/article/details/71374590
+
+## synchronized和ReentrantLock的区别
+
+https://www.cnblogs.com/fanguangdexiaoyuer/p/5313653.html
+
+https://www.cnblogs.com/-new/p/7256297.html
+
+## Java多线程之interrupt()的深度研究
+
+interrupt status(中断状态)：请记住这个术语，中断机制就是围绕着这个字段来工作的。在Java源码中代表中断状态的字段是：private volatile Interruptible blocker;
+
+https://www.cnblogs.com/carmanloneliness/p/3516405.html
+
+## 为什么volatile关键字保证不了线程安全
+
+https://blog.csdn.net/qq_33330687/article/details/80990729
+
+## LongAdder源码学习
+
+LongAdder在AtomicLong的基础上将单点的更新压力分散到各个节点，在低并发的时候通过对base的直接更新可以很好的保障和AtomicLong的性能基本保持一致，而在高并发的时候通过分散提高了性能。 
+
+```java
+@sun.misc.Contended static final class Cell {
+    volatile long value;
+    Cell(long x) { value = x; }
+    final boolean cas(long cmp, long val) {
+        return UNSAFE.compareAndSwapLong(this, valueOffset, cmp, val);
+    }
+
+    // Unsafe mechanics
+    private static final sun.misc.Unsafe UNSAFE;
+    private static final long valueOffset;
+    static {
+        try {
+            UNSAFE = sun.misc.Unsafe.getUnsafe();
+            Class<?> ak = Cell.class;
+            valueOffset = UNSAFE.objectFieldOffset
+                (ak.getDeclaredField("value"));
+        } catch (Exception e) {
+            throw new Error(e);
+        }
+    }
+}
+
+public void add(long x) {
+        Cell[] as; long b, v; int m; Cell a;
+        //尝试更新base,若并发不高，能更新成功，退出条件(cas更新)
+        if ((as = cells) != null || !casBase(b = base, b + x)) {
+            boolean uncontended = true;
+            /**
+            * 尝试第二次更新值,取得Cell[]中的一个值，getProbe() & m是
+            * 取得一个随机整数然后和m(数组大小-1)做与运算，得出的值在
+            * 0～(as.length - 1)之间,更新成功则退出条件
+            */
+            if (as == null || (m = as.length - 1) < 0 ||
+                (a = as[getProbe() & m]) == null ||
+                !(uncontended = a.cas(v = a.value, v + x)))
+                longAccumulate(x, null, uncontended);
+        }
+    }
+
+final void longAccumulate(long x, LongBinaryOperator fn,
+                              boolean wasUncontended) {
+        int h;
+        // 线程安全取得一个随机整数，设置是否并发竞争为true
+        if ((h = getProbe()) == 0) {
+            ThreadLocalRandom.current(); 
+            h = getProbe();
+            wasUncontended = true;
+        }
+        //是否碰撞，参考hashmap
+        boolean collide = false; 
+        for (;;) {
+            Cell[] as; Cell a; int n; long v;
+            if ((as = cells) != null && (n = as.length) > 0) {
+                //如果数组指定位置为空，则赋值
+                if ((a = as[(n - 1) & h]) == null) {
+                    if (cellsBusy == 0) {       
+                        Cell r = new Cell(x);
+                        //创建Cell时,casCellsBusy()锁住数组
+                        if (cellsBusy == 0 && casCellsBusy()) {
+                            boolean created = false;
+                            try {               
+                                Cell[] rs; int m, j;
+                                if ((rs = cells) != null &&
+                                    (m = rs.length) > 0 &&
+                                    rs[j = (m - 1) & h] == null) {
+                                    rs[j] = r;
+                                    created = true;
+                                }
+                            } finally {
+                                cellsBusy = 0;
+                            }
+                            if (created)
+                                break;
+                            continue;
+                        }
+                    }
+                    //指定数组位置为null则说明没有碰撞
+                    collide = false;
+                }
+                else if (!wasUncontended)
+                    wasUncontended = true;
+                /**
+                * a不为null,更新a的value,成功则退出。更新失败则
+                * 说明多个线程同时更新一个Cell，并发量大，碰撞几率高
+                * 可能需要扩容
+                */
+                else if (a.cas(v = a.value, ((fn == null) ? v + x :
+                                             fn.applyAsLong(v, x))))
+                    break;
+                /**
+                * 若数组大小大于CPU个数，则说明碰撞不是由于数组过小导致
+                * 则重新尝试更新数据
+                */
+                else if (n >= NCPU || cells != as)
+                    collide = false;            
+                else if (!collide)
+                    collide = true;
+                //扩容数组,扩容时锁住数组
+                else if (cellsBusy == 0 && casCellsBusy()) {
+                    try {
+                        if (cells == as) {      
+                            Cell[] rs = new Cell[n << 1];
+                            for (int i = 0; i < n; ++i)
+                                rs[i] = as[i];
+                            cells = rs;
+                        }
+                    } finally {
+                        cellsBusy = 0;
+                    }
+                    collide = false;
+                    continue;                   
+                }
+                h = advanceProbe(h);
+            }
+            //若cell[]为空，初始化
+            else if (cellsBusy == 0 && cells == as && casCellsBusy()) {
+                boolean init = false;
+                try {                           // Initialize table
+                    if (cells == as) {
+                        Cell[] rs = new Cell[2];
+                        rs[h & 1] = new Cell(x);
+                        cells = rs;
+                        init = true;
+                    }
+                } finally {
+                    cellsBusy = 0;
+                }
+                if (init)
+                    break;
+            }
+            else if (casBase(v = base, ((fn == null) ? v + x :
+                                        fn.applyAsLong(v, x))))
+                break;                          // Fall back on using base
+        }
+    }
+//加锁方法
+final boolean casCellsBusy() {
+    return UNSAFE.compareAndSwapInt(this, CELLSBUSY, 0, 1);
+}
+
+/**
+* 返回各个线程操作总和，LongAdder在统计的时候如果有并发更新
+* 可能导致统计的数据有误差，因为volatile并不能保证并发安全
+*/
+public long sum() {
+    Cell[] as = cells; Cell a;
+    long sum = base;
+    if (as != null) {
+        for (int i = 0; i < as.length; ++i) {
+            if ((a = as[i]) != null)
+                sum += a.value;
+        }
+    }
+    return sum;
+}
+```
+
+## 深克隆与浅克隆
+
+https://www.cnblogs.com/c-h-y/p/9574586.html
+
+对象要实现Cloneable接口才能调用clone()方法，否则会抛出CloneNotSupportException。clone()方法需要重写，或者使用序列化的方式来深克隆对象
+
+## sleep()和wait()的区别
+
++ 从使用角度看，sleep是Thread线程类的方法，而wait是Object顶级类的方法。
++ sleep可以在任何地方使用，而wait只能在同步方法或者同步块中使用。
++ sleep,wait调用后都会暂停当前线程并让出cpu的执行时间，但不同的是sleep不会释放当前持有的对象的锁资源，到时间后会继续执行，而wait会放弃所有锁并需要notify/notifyAll后重新获取到对象锁资源后才能继续执行。
+
+
+## String为什么时final类
++ 为了实现字符串池
++ 为了线程安全
++ 为了实现String可以创建HashCode不可变性
+那么为什么保证String不可变呢,因为只有当字符串是不可变的，字符串池才有可能实现。字符串池的实现可以在运行时节约很多heap空间，因为不同的字符串变量都指向池中的同一个字符串。但如果字符串是可变的，那么String interning将不能实现，因为这样的话，如果变量改变了它的值，那么其它指向这个值的变量的值也会一起改变。
+
+## HashMap与TreeMap的区别
+
++ HashMap通过hashcode对其内容进行快速查找，而 TreeMap中所有的元素都保持着某种固定的顺序，如果你需要得到一个有序的结果你就应该使用TreeMap（HashMap中元素的排列顺序是不固定的）
++ HashMap继承AbstractMap覆盖了equals()和hashCode()方法以确保两个相等映射返回相同的哈希码,TreeMap继承自SortedMap它用来保持键的有序顺序(HashMap的键对象需要覆写equals()和hashCode()方法)
+
+## TCP三次握手，4次挥手
+https://www.cnblogs.com/lms0755/p/9053119.html
+https://blog.csdn.net/u012371712/article/details/80795297
+https://juejin.im/entry/5981c5df518825359a2b9476
+
+TCP/IP的模型将协议分成五个层次，它们分别是物理层、链路层、网络层、传输层和应用层
+
++ SYN：发起一个新连接
++ ACK：确认序号有效
++ FIN：释放一个连接
+
+established状态
+
+### 为什么要三次握手？
+
+为了防止已失效的连接请求报文段突然又传送到了服务端，因而产生错误
+
+client发出的第一个连接请求报文段并没有丢失，而是在某个网络结点长时间的滞留了，以致延误到连接释放以后的某个时间才到达server。本来这是一个早已超时失效的报文段。但server收到此失效的连接请求报文段后，就误认为是client再次发出的一个新的连接请求。于是就向client发出确认报文段，同意建立连接。假设不采用“三次握手”，那么只要server发出确认，新的连接就建立了。由于现在client并没有发出建立连接的请求，因此不会理睬server的确认，也不会向server发送数据。但server却以为新的运输连接已经建立，并一直等待client发来数据。这样，server的很多资源就白白浪费掉了。采用“三次握手”的办法可以防止上述现象发生。
+
+### 为什么要四次分手？
+
+TCP协议是一种面向连接的、可靠的、基于字节流的运输层通信协议。TCP是全双工模式，这就意味着，当主机1发出FIN报文段时，只是表示主机1已经没有数据要发送了，主机1告诉主机2，它的数据已经全部发送完毕了；但是，这个时候主机1还是可以接受来自主机2的数据；当主机2返回ACK报文段时，表示它已经知道主机1没有数据发送了，但是主机2还是可以发送数据到主机1的；当主机2也发送了FIN报文段时，这个时候就表示主机2也没有数据要发送了，就会告诉主机1，我也没有数据要发送了，之后彼此就会愉快的中断这次TCP连接。
