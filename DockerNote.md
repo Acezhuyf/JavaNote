@@ -1,5 +1,8 @@
 # DockerNote
 
+## Docker常用指令
+https://www.cnblogs.com/zhujingzhi/p/9815179.html
+
 ## 配置container
 
 配置文件为Dockerfile
@@ -116,3 +119,69 @@ docker container ls -q                                      # List container IDs
 docker stack rm <appname>                             # Tear down an application
 docker swarm leave --force      # Take down a single node swarm from the manager
 ```
+
+## Docker-machine安装
+
+```
+需要翻墙
+
+base=https://github.com/docker/machine/releases/download/v0.16.0 &&
+  curl -L $base/docker-machine-$(uname -s)-$(uname -m) >/tmp/docker-machine &&
+  sudo install /tmp/docker-machine /usr/local/bin/docker-machine
+
+#开启机器
+docker-machine start name
+```
+
+## 建立cluster
+
+```docker
+docker-machine create --driver virtualbox myvm1
+docker-machine create --driver virtualbox myvm2
+
+docker-machine ls
+NAME    ACTIVE   DRIVER       STATE     URL                         SWARM   DOCKER        ERRORS
+myvm1   -        virtualbox   Running   tcp://192.168.99.100:2376           v17.06.2-ce
+myvm2   -        virtualbox   Running   tcp://192.168.99.101:2376 
+
+#使用2377端口
+#Always run docker swarm init and docker swarm join with port 2377 (the swarm management port), or no port at all and let it take the default.
+
+#The machine IP addresses returned by docker-machine ls include port 2376, which is the Docker daemon port. Do not use this port or you may experience errors.
+
+docker-machine ssh myvm1 "docker swarm init --advertise-addr 192.168.99.100:2377"
+
+Swarm initialized: current node (5uq4vx2y99xlo361s5m73svir) is now a manager.
+
+To add a worker to this swarm, run the following command:
+
+    docker swarm join --token SWMTKN-1-22rmqcoj7rs9hyv8dvrgdj3f09f901ujcbv1ry345fb6d8avii-dan1aiw63y3ek1qzuddfolrn6 192.168.99.100:2377
+
+To add a manager to this swarm, run 'docker swarm join-token manager' and follow the instructions.
+
+#将一台机器作为worker加入cluster
+docker-machine ssh myvm2 “docker swarm join --token SWMTKN-1-22rmqcoj7rs9hyv8dvrgdj3f09f901ujcbv1ry345fb6d8avii-dan1aiw63y3ek1qzuddfolrn6 192.168.99.100:2377”
+
+docker-machine ssh myvm1 "docker node ls"
+ID                            HOSTNAME            STATUS              AVAILABILITY        MANAGER STATUS
+brtu9urxwfd5j0zrmkubhpkbd     myvm2               Ready               Active
+rihwohkh3ph38fhillhhb84sk *   myvm1               Ready               Active              Leader
+```
+
+## 将app部署到cluster
+
+```docker
+#查看可以使用的vm
+docker-machine ls
+#配置myvm1
+eval $(docker-machine env myvm1)
+
+#这时执行命令不需要加sudo，加了sudo是操作本机的环境，直接执行是操作eval设置的虚拟机
+#进入到存放docker-compose.yml的文件夹执行
+docker stack deploy -c docker-compose.yml getstartedlab
+
+docker stack ps
+#部署完毕后访问虚拟机ip:4000(port在配置文件中)
+http://192.168.99.101:4000/
+```
+
