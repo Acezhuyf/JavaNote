@@ -70,7 +70,13 @@ docker push acezhuyf/test
 #上传成功后，在任何机器上执行这段命令即可运行
 docker run -p 4000:80 acezhuyf/test
 ```
+## 下载docker-compose
 
+```docker
+sudo curl -L https://github.com/docker/compose/releases/download/1.24.0/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+
+sudo chmod +x /usr/local/bin/docker-compose
+```
 ## Docker部署负载均衡集群
 
 建一个文件docker-compose.yml
@@ -184,4 +190,7 @@ docker stack ps
 #部署完毕后访问虚拟机ip:4000(port在配置文件中)
 http://192.168.99.101:4000/
 ```
+part5 里visualizer的镜像需要翻墙下载，不然service一直在preparing状态
 
+建立data文件夹要使用docker-machine ssh myvm1 "mkdir ./data"
+虽然之前执行了eval $(docker-machine env myvm1)命令，但直接执行mkdir ./data其实是在本地建立一个文件夹
